@@ -2,46 +2,216 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lucky Auction 48 - Random Đấu Giá</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
         :root {
-            --bg-color: #121212;
-            --panel-bg: #1e1e2f;
-            --accent-color: #ffd700; /* Màu vàng kim loại */
-            --accent-glow: rgba(255, 215, 0, 0.5);
-            --text-color: #ffffff;
+            --bg-dark: #0f0f13;
+            --bg-gradient: radial-gradient(circle at center, #2a2a3e 0%, #0f0f13 100%);
+            --panel-bg: rgba(30, 30, 47, 0.95);
+            --accent-color: #FFD700;
+            --accent-gradient: linear-gradient(135deg, #FFD700 0%, #FDB931 100%);
+            --accent-glow: rgba(255, 215, 0, 0.3);
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
             --danger-color: #ff4757;
             --success-color: #2ed573;
+            --border-radius: 16px;
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             margin: 0;
             font-family: 'Montserrat', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background: var(--bg-dark);
+            background-image: var(--bg-gradient);
+            color: var(--text-main);
             height: 100vh;
             display: flex;
             overflow: hidden;
         }
 
-        /* --- LAYOUT --- */
+        /* --- MOBILE HEADER & OVERLAY --- */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            padding: 0 20px;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            background: rgba(15, 15, 19, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 49; /* Below sidebar, above content */
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .overlay.active { opacity: 1; pointer-events: auto; }
+
+        /* --- SIDEBAR --- */
         .sidebar {
-            width: 350px;
+            width: 360px;
             background-color: var(--panel-bg);
-            border-right: 1px solid #333;
+            border-right: 1px solid rgba(255,255,255,0.1);
             display: flex;
             flex-direction: column;
             padding: 20px;
-            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
-            z-index: 10;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.3);
+            z-index: 50;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo-text { font-weight: 900; font-size: 1.2rem; color: var(--accent-color); letter-spacing: 1px; }
+        .close-sidebar-btn { display: none; background: none; border: none; color: white; font-size: 1.5rem; }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            padding: 5px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px; /* Custom Scrollbar space */
+        }
+        .tab-content.active { display: block; }
+
+        /* Custom Scrollbar */
+        .tab-content::-webkit-scrollbar { width: 6px; }
+        .tab-content::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        .tab-content::-webkit-scrollbar-track { background: transparent; }
+
+        /* GRID & INPUTS */
+        .num-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .num-cell {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-muted);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            transition: 0.2s;
+            user-select: none;
+        }
+
+        .num-cell:hover { background: rgba(255,255,255,0.1); color: white; }
+        .num-cell.excluded {
+            background-color: rgba(255, 71, 87, 0.2);
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+            text-decoration: line-through;
+        }
+
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+        
+        .styled-input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: 0.3s;
+        }
+        .styled-input:focus { outline: none; border-color: var(--accent-color); }
+
+        .btn-reset {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 71, 87, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .btn-reset:hover { background: var(--danger-color); color: white; }
+
+        /* HISTORY */
+        .history-item {
+            background: rgba(255,255,255,0.03);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            font-size: 0.9rem;
+            animation: fadeIn 0.5s ease;
+        }
+        .history-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .history-prize { color: var(--accent-color); font-weight: bold; }
+        .history-time { font-size: 0.75rem; color: #666; }
+        .history-detail { color: #ddd; padding-left: 10px; border-left: 1px solid #444; margin-top: 5px; }
+
+        /* --- MAIN STAGE --- */
         .main-stage {
             flex: 1;
             display: flex;
@@ -49,136 +219,69 @@
             justify-content: center;
             align-items: center;
             position: relative;
-            background: radial-gradient(circle at center, #2c2c44 0%, #121212 70%);
-        }
-
-        /* --- SIDEBAR COMPONENTS --- */
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #444;
-        }
-
-        .tab-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            color: #888;
-            padding: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            transition: 0.3s;
-        }
-
-        .tab-btn.active {
-            color: var(--accent-color);
-            border-bottom: 2px solid var(--accent-color);
-        }
-
-        .tab-content {
-            display: none;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .tab-content.active { display: block; }
-
-        /* Settings Grid */
-        .num-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 5px;
-            margin-bottom: 20px;
-        }
-
-        .num-cell {
-            aspect-ratio: 1;
-            background: #333;
-            border: 1px solid #555;
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            font-size: 12px;
-            border-radius: 4px;
-        }
-
-        .num-cell.excluded {
-            background-color: var(--danger-color);
-            opacity: 0.5;
-            text-decoration: line-through;
-        }
-
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; margin-bottom: 5px; font-size: 0.9em; color: #aaa; }
-        .input-group textarea, .input-group input {
+            padding: 20px;
             width: 100%;
-            background: #222;
-            border: 1px solid #444;
-            color: #fff;
-            padding: 8px;
-            border-radius: 4px;
         }
 
-        /* History List */
-        .history-item {
-            background: #2a2a3d;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 5px;
-            border-left: 3px solid var(--accent-color);
-            font-size: 0.9em;
-        }
-        .history-time { font-size: 0.7em; color: #888; float: right; }
-
-        /* --- MAIN STAGE --- */
-        .money-display {
-            font-size: 3rem;
+        .money-input {
+            font-size: clamp(1.5rem, 5vw, 3rem); /* Responsive font size */
             color: var(--success-color);
             font-weight: 900;
-            text-shadow: 0 0 10px rgba(46, 213, 115, 0.4);
-            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(46, 213, 115, 0.2);
+            margin-bottom: 30px;
             border: none;
             background: transparent;
             text-align: center;
-            width: 80%;
+            width: 100%;
+            max-width: 800px;
+            font-family: 'Montserrat', sans-serif;
         }
+        .money-input:focus { outline: none; border-bottom: 1px solid #333; }
+        .money-input::placeholder { color: #333; opacity: 0.5; }
 
-        .money-display:focus { outline: none; border-bottom: 2px solid var(--success-color); }
-
+        /* RESULT BOXES */
         .result-container {
             display: flex;
             gap: 20px;
-            min-height: 250px;
+            flex-wrap: wrap;
+            justify-content: center;
             align-items: center;
+            width: 100%;
+            min-height: 280px;
         }
 
         .result-box {
-            width: 220px;
-            height: 220px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid var(--accent-color);
-            border-radius: 20px;
+            width: clamp(140px, 30vw, 240px); /* Responsive width */
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            border-radius: var(--border-radius);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 0 20px var(--accent-glow);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
         }
 
+        .result-box.popping { transform: scale(1.05); border-color: var(--accent-color); box-shadow: 0 0 30px var(--accent-glow); }
+
         .result-number {
-            font-size: 7rem;
+            font-size: clamp(3rem, 8vw, 7rem);
             font-weight: 900;
-            color: var(--accent-color);
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             line-height: 1;
+            filter: drop-shadow(0 0 10px rgba(255,215,0,0.3));
         }
 
         .result-name {
-            font-size: 1.2rem;
-            margin-top: 10px;
+            font-size: clamp(0.8rem, 2vw, 1.2rem);
+            margin-top: 15px;
             color: #fff;
             text-align: center;
             padding: 0 10px;
@@ -186,104 +289,165 @@
             overflow: hidden;
             text-overflow: ellipsis;
             width: 100%;
+            opacity: 0.8;
         }
 
-        /* --- CONTROLS --- */
+        /* CONTROLS */
         .controls-area {
-            margin-top: 40px;
+            margin-top: auto;
+            padding-bottom: 40px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
+            width: 100%;
         }
 
         .mode-selector {
-            background: #333;
-            border-radius: 30px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50px;
             padding: 5px;
             display: flex;
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .mode-btn {
-            padding: 8px 20px;
-            border-radius: 25px;
+            padding: 10px 25px;
+            border-radius: 40px;
             border: none;
             background: transparent;
-            color: #aaa;
+            color: var(--text-muted);
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: 0.3s;
         }
 
         .mode-btn.active {
             background: var(--accent-color);
             color: #000;
+            box-shadow: 0 0 15px var(--accent-glow);
         }
 
         .spin-btn {
-            background: linear-gradient(45deg, #ffd700, #ffaa00);
+            background: var(--accent-gradient);
             border: none;
-            padding: 15px 60px;
-            font-size: 1.5rem;
+            padding: 18px 80px;
+            font-size: 1.2rem;
             font-weight: 900;
             color: #000;
-            border-radius: 50px;
+            border-radius: 60px;
             cursor: pointer;
             text-transform: uppercase;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
-            transition: transform 0.1s, box-shadow 0.1s;
+            letter-spacing: 2px;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+            transition: transform 0.1s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
         }
 
-        .spin-btn:active {
-            transform: scale(0.95);
+        .spin-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: linear-gradient(rgba(255,255,255,0.4), transparent);
+            transform: rotate(45deg) translateY(-100%);
+            transition: 0.5s;
         }
         
-        .spin-btn:disabled {
-            background: #555;
-            color: #888;
-            cursor: not-allowed;
-            box-shadow: none;
+        .spin-btn:hover::after { transform: rotate(45deg) translateY(100%); }
+        .spin-btn:active { transform: scale(0.95); box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2); }
+        .spin-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- RESPONSIVE MEDIA QUERIES --- */
+        @media (max-width: 900px) {
+            .sidebar {
+                position: fixed;
+                top: 0; left: 0; bottom: 0;
+                transform: translateX(-100%);
+                width: 85%;
+                max-width: 350px;
+            }
+            .sidebar.open { transform: translateX(0); }
+            
+            .mobile-header { display: flex; }
+            .close-sidebar-btn { display: block; }
+            
+            .main-stage {
+                padding-top: 80px; /* Space for header */
+            }
+
+            .controls-area { margin-top: 40px; }
+            .money-input { margin-bottom: 20px; }
         }
 
+        @media (max-width: 480px) {
+            .result-container { gap: 10px; }
+            .mode-btn { padding: 8px 16px; font-size: 0.8rem; }
+            .spin-btn { width: 90%; padding: 15px 0; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
+    <!-- Overlay for mobile when sidebar is open -->
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="logo-text">LUCKY AUCTION 48</div>
+        <div style="width: 24px;"></div> <!-- Spacer -->
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-text">CẤU HÌNH</div>
+            <button class="close-sidebar-btn" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
+        </div>
+
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('settings')">Cấu hình</button>
-            <button class="tab-btn" onclick="switchTab('history')">Lịch sử</button>
+            <button class="tab-btn active" onclick="switchTab('settings', event)">Thiết lập</button>
+            <button class="tab-btn" onclick="switchTab('history', event)">Lịch sử</button>
         </div>
 
         <div id="settings" class="tab-content active">
             <div class="input-group">
-                <label><strong>Vùng An Toàn (Click để loại trừ):</strong></label>
-                <div class="num-grid" id="exclusionGrid">
-                    </div>
-                <small style="color: #666;">Các ô màu đỏ sẽ không bao giờ được quay trúng.</small>
+                <label><i class="fas fa-ban"></i> Vùng An Toàn (Click để loại trừ):</label>
+                <div class="num-grid" id="exclusionGrid"></div>
             </div>
 
             <div class="input-group">
-                <label><strong>Nhập tên (Mỗi dòng 1 tên):</strong></label>
-                <textarea id="nameList" rows="10" placeholder="1. Nguyễn Văn A&#10;2. Trần Thị B&#10;..."></textarea>
-                <small style="color: #666;">Hệ thống tự map dòng 1 = số 1.</small>
+                <label><i class="fas fa-list"></i> Danh sách tên (Mỗi dòng 1 tên):</label>
+                <textarea id="nameList" class="styled-input" rows="8" placeholder="1. Nguyễn Văn A&#10;2. Trần Thị B&#10;..."></textarea>
+                <div style="font-size: 0.75rem; color: #666; margin-top: 5px;">Hệ thống tự map dòng 1 = số 1.</div>
             </div>
             
             <div class="input-group">
-                <button onclick="resetAll()" style="width: 100%; padding: 10px; background: #333; color: white; border: 1px solid #555; cursor: pointer;">Reset Dữ Liệu</button>
+                <button onclick="resetAll()" class="btn-reset"><i class="fas fa-trash"></i> Reset Dữ Liệu</button>
             </div>
         </div>
 
         <div id="history" class="tab-content">
             <div id="historyList">
-                <div style="text-align: center; color: #555; margin-top: 20px;">Chưa có kết quả nào</div>
+                <div style="text-align: center; color: #555; margin-top: 40px;">
+                    <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px;"></i><br>
+                    Chưa có kết quả nào
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Main Stage -->
     <div class="main-stage">
-        <input type="text" class="money-display" id="prizeMoney" value="500,000 VND" placeholder="Nhập số tiền...">
+        <input type="text" class="money-input" id="prizeMoney" value="500,000 VND" placeholder="Nhập phần thưởng...">
 
         <div class="result-container" id="resultContainer">
+            <!-- Boxes injected via JS -->
             <div class="result-box">
                 <div class="result-number">?</div>
                 <div class="result-name">Sẵn sàng</div>
@@ -301,27 +465,31 @@
     </div>
 
     <script>
-        // --- CẤU HÌNH & STATE ---
+        // --- CONSTANTS & STATE ---
         const TOTAL_NUMBERS = 48;
-        let excludedNumbers = new Set(); // Chứa các số bị loại (Blacklist)
-        let winnerNumbers = new Set();   // Chứa các số đã trúng (để không quay lại)
-        let currentMode = 1; // 1, 2, hoặc 3 số
+        let excludedNumbers = new Set(); 
+        let winnerNumbers = new Set();   
+        let currentMode = 1; 
         let isSpinning = false;
         
-        // --- KHỞI TẠO ---
+        // --- INIT ---
         window.onload = function() {
             renderExclusionGrid();
-            // Load tên mẫu (nếu muốn)
-            // document.getElementById('nameList').value = "Nguyễn Văn A\nTrần Thị B\nLê Văn C...";
+            setMode(1); // Force init UI
         };
 
-        // --- HÀM XỬ LÝ GIAO DIỆN ---
-        function switchTab(tabName) {
+        // --- UI FUNCTIONS ---
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        function switchTab(tabName, event) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             
             document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+            event.currentTarget.classList.add('active');
         }
 
         function renderExclusionGrid() {
@@ -351,13 +519,11 @@
             if(isSpinning) return;
             currentMode = mode;
             
-            // Update UI nút bấm
             document.querySelectorAll('.mode-btn').forEach((btn, index) => {
                 if (index + 1 === mode) btn.classList.add('active');
                 else btn.classList.remove('active');
             });
 
-            // Update UI hiển thị ô kết quả
             const container = document.getElementById('resultContainer');
             container.innerHTML = '';
             for(let i=0; i<mode; i++) {
@@ -373,16 +539,15 @@
         function getName(num) {
             const text = document.getElementById('nameList').value;
             const lines = text.split('\n');
-            // Mảng bắt đầu từ 0, số bắt đầu từ 1
-            if (lines[num-1]) return lines[num-1];
-            return "Khách mời " + num;
+            if (lines[num-1] && lines[num-1].trim() !== "") return lines[num-1];
+            return "Số " + num;
         }
 
-        // --- CORE LOGIC: RANDOM ---
+        // --- CORE LOGIC ---
         function startSpin() {
             if (isSpinning) return;
             
-            // 1. Tính toán Pool khả dụng
+            // Pool Calculation
             let availablePool = [];
             for(let i=1; i<=TOTAL_NUMBERS; i++) {
                 if (!excludedNumbers.has(i) && !winnerNumbers.has(i)) {
@@ -390,90 +555,86 @@
                 }
             }
 
-            // 2. Validate
             if (availablePool.length < currentMode) {
-                alert("Không đủ số để quay! (Đã quay hết hoặc bị loại trừ quá nhiều)");
+                alert("Không đủ số khả dụng để quay!");
                 return;
             }
 
-            // 3. Bắt đầu quay
             isSpinning = true;
             document.getElementById('spinBtn').disabled = true;
             const prizeValue = document.getElementById('prizeMoney').value;
 
-            // Hiệu ứng chạy số (Rolling)
+            // Rolling Effect
             let frames = 0;
-            const duration = 50; // số lần nhảy số
             const interval = setInterval(() => {
                 frames++;
-                // Update số ngẫu nhiên giả trên màn hình
+                
+                // Sound effect placeholder (optional)
+                
                 for(let i=0; i<currentMode; i++) {
                     const randTemp = availablePool[Math.floor(Math.random() * availablePool.length)];
                     updateBoxUI(i, randTemp, false);
                 }
 
-                // Dừng lại
-                if (frames > 20 && frames > (20 + Math.random()*10)) { // Random thời điểm dừng chút xíu cho tự nhiên
+                if (frames > 25 && frames > (25 + Math.random()*15)) { 
                     clearInterval(interval);
                     finalizeResult(availablePool, prizeValue);
                 }
-            }, 80); // Tốc độ nhảy số (ms)
+            }, 60);
         }
 
         function finalizeResult(availablePool, prizeValue) {
-            // Chọn kết quả thật
             let results = [];
+            
+            // Pick winners
             for(let i=0; i<currentMode; i++) {
-                // Lấy ngẫu nhiên từ pool và xoá khỏi pool tạm để không trùng trong cùng 1 lượt batch
                 const index = Math.floor(Math.random() * availablePool.length);
                 const picked = availablePool[index];
                 results.push(picked);
                 availablePool.splice(index, 1); 
-                
-                // Thêm vào danh sách đã trúng chính thức
                 winnerNumbers.add(picked);
             }
 
-            // Update UI lần cuối
+            // Update UI Final
             results.forEach((num, idx) => {
                 updateBoxUI(idx, num, true);
             });
 
-            // Hiệu ứng ăn mừng
             triggerConfetti();
             isSpinning = false;
             document.getElementById('spinBtn').disabled = false;
 
-            // Lưu log
             logHistory(results, prizeValue);
         }
 
         function updateBoxUI(boxIndex, number, isFinal) {
             const box = document.getElementById(`box-${boxIndex}`);
             box.querySelector('.result-number').innerText = number < 10 ? `0${number}` : number;
-            box.querySelector('.result-name').innerText = getName(number);
+            box.querySelector('.result-name').innerText = isFinal ? getName(number) : '...';
             
             if(isFinal) {
-                box.style.borderColor = "#fff";
-                setTimeout(() => box.style.borderColor = "var(--accent-color)", 200);
+                box.classList.add('popping');
+                setTimeout(() => box.classList.remove('popping'), 500);
             }
         }
 
-        // --- HISTORY & UTILS ---
         function logHistory(numbers, prize) {
             const list = document.getElementById('historyList');
-            // Xóa thông báo trống nếu có
-            if (list.querySelector('div').innerText === "Chưa có kết quả nào") {
+            if (list.querySelector('.fa-history')) {
                 list.innerHTML = '';
             }
 
-            const now = new Date().toLocaleTimeString();
-            let html = `<div class="history-item">
-                <span class="history-time">${now}</span>
-                <div style="color: var(--accent-color); font-weight:bold;">${prize}</div>`;
+            const now = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            
+            let html = `
+            <div class="history-item">
+                <div class="history-header">
+                    <span class="history-prize">${prize}</span>
+                    <span class="history-time">${now}</span>
+                </div>`;
             
             numbers.forEach(n => {
-                html += `<div>Số <strong>${n}</strong> - ${getName(n)}</div>`;
+                html += `<div class="history-detail">Số <strong>${n}</strong> - ${getName(n)}</div>`;
             });
             html += `</div>`;
 
@@ -485,17 +646,11 @@
             var animationEnd = Date.now() + duration;
             var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
 
-            var random = function(min, max) {
-              return Math.random() * (max - min) + min;
-            };
+            var random = function(min, max) { return Math.random() * (max - min) + min; };
 
             var interval = setInterval(function() {
               var timeLeft = animationEnd - Date.now();
-
-              if (timeLeft <= 0) {
-                return clearInterval(interval);
-              }
-
+              if (timeLeft <= 0) return clearInterval(interval);
               var particleCount = 50 * (timeLeft / duration);
               confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.1, 0.3), y: Math.random() - 0.2 } }));
               confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.7, 0.9), y: Math.random() - 0.2 } }));
@@ -503,15 +658,14 @@
         }
 
         function resetAll() {
-            if(confirm("Bạn có chắc chắn muốn xóa hết lịch sử và làm mới vòng quay?")) {
+            if(confirm("Xóa toàn bộ lịch sử và làm mới vòng quay?")) {
                 winnerNumbers.clear();
                 excludedNumbers.clear();
                 renderExclusionGrid();
-                document.getElementById('historyList').innerHTML = '<div style="text-align: center; color: #555; margin-top: 20px;">Chưa có kết quả nào</div>';
+                document.getElementById('historyList').innerHTML = '<div style="text-align: center; color: #555; margin-top: 40px;"><i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px;"></i><br>Chưa có kết quả nào</div>';
                 setMode(1);
             }
         }
-
     </script>
 </body>
 </html>
