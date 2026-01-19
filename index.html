@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky Auction 48 - Random Đấu Giá</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e2f;
+            --accent-color: #ffd700; /* Màu vàng kim loại */
+            --accent-glow: rgba(255, 215, 0, 0.5);
+            --text-color: #ffffff;
+            --danger-color: #ff4757;
+            --success-color: #2ed573;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- LAYOUT --- */
+        .sidebar {
+            width: 350px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .main-stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: radial-gradient(circle at center, #2c2c44 0%, #121212 70%);
+        }
+
+        /* --- SIDEBAR COMPONENTS --- */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #444;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: #888;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tab-content.active { display: block; }
+
+        /* Settings Grid */
+        .num-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .num-cell {
+            aspect-ratio: 1;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .num-cell.excluded {
+            background-color: var(--danger-color);
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-size: 0.9em; color: #aaa; }
+        .input-group textarea, .input-group input {
+            width: 100%;
+            background: #222;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        /* History List */
+        .history-item {
+            background: #2a2a3d;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            border-left: 3px solid var(--accent-color);
+            font-size: 0.9em;
+        }
+        .history-time { font-size: 0.7em; color: #888; float: right; }
+
+        /* --- MAIN STAGE --- */
+        .money-display {
+            font-size: 3rem;
+            color: var(--success-color);
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(46, 213, 115, 0.4);
+            margin-bottom: 20px;
+            border: none;
+            background: transparent;
+            text-align: center;
+            width: 80%;
+        }
+
+        .money-display:focus { outline: none; border-bottom: 2px solid var(--success-color); }
+
+        .result-container {
+            display: flex;
+            gap: 20px;
+            min-height: 250px;
+            align-items: center;
+        }
+
+        .result-box {
+            width: 220px;
+            height: 220px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--accent-color);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 20px var(--accent-glow);
+            backdrop-filter: blur(10px);
+        }
+
+        .result-number {
+            font-size: 7rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            line-height: 1;
+        }
+
+        .result-name {
+            font-size: 1.2rem;
+            margin-top: 10px;
+            color: #fff;
+            text-align: center;
+            padding: 0 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* --- CONTROLS --- */
+        .controls-area {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .mode-selector {
+            background: #333;
+            border-radius: 30px;
+            padding: 5px;
+            display: flex;
+        }
+
+        .mode-btn {
+            padding: 8px 20px;
+            border-radius: 25px;
+            border: none;
+            background: transparent;
+            color: #aaa;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .spin-btn {
+            background: linear-gradient(45deg, #ffd700, #ffaa00);
+            border: none;
+            padding: 15px 60px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #000;
+            border-radius: 50px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .spin-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .spin-btn:disabled {
+            background: #555;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('settings')">Cấu hình</button>
+            <button class="tab-btn" onclick="switchTab('history')">Lịch sử</button>
+        </div>
+
+        <div id="settings" class="tab-content active">
+            <div class="input-group">
+                <label><strong>Vùng An Toàn (Click để loại trừ):</strong></label>
+                <div class="num-grid" id="exclusionGrid">
+                    </div>
+                <small style="color: #666;">Các ô màu đỏ sẽ không bao giờ được quay trúng.</small>
+            </div>
+
+            <div class="input-group">
+                <label><strong>Nhập tên (Mỗi dòng 1 tên):</strong></label>
+                <textarea id="nameList" rows="10" placeholder="1. Nguyễn Văn A&#10;2. Trần Thị B&#10;..."></textarea>
+                <small style="color: #666;">Hệ thống tự map dòng 1 = số 1.</small>
+            </div>
+            
+            <div class="input-group">
+                <button onclick="resetAll()" style="width: 100%; padding: 10px; background: #333; color: white; border: 1px solid #555; cursor: pointer;">Reset Dữ Liệu</button>
+            </div>
+        </div>
+
+        <div id="history" class="tab-content">
+            <div id="historyList">
+                <div style="text-align: center; color: #555; margin-top: 20px;">Chưa có kết quả nào</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-stage">
+        <input type="text" class="money-display" id="prizeMoney" value="500,000 VND" placeholder="Nhập số tiền...">
+
+        <div class="result-container" id="resultContainer">
+            <div class="result-box">
+                <div class="result-number">?</div>
+                <div class="result-name">Sẵn sàng</div>
+            </div>
+        </div>
+
+        <div class="controls-area">
+            <div class="mode-selector">
+                <button class="mode-btn active" onclick="setMode(1)">1 Số</button>
+                <button class="mode-btn" onclick="setMode(2)">2 Số</button>
+                <button class="mode-btn" onclick="setMode(3)">3 Số</button>
+            </div>
+            <button class="spin-btn" id="spinBtn" onclick="startSpin()">QUAY NGAY</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CẤU HÌNH & STATE ---
+        const TOTAL_NUMBERS = 48;
+        let excludedNumbers = new Set(); // Chứa các số bị loại (Blacklist)
+        let winnerNumbers = new Set();   // Chứa các số đã trúng (để không quay lại)
+        let currentMode = 1; // 1, 2, hoặc 3 số
+        let isSpinning = false;
+        
+        // --- KHỞI TẠO ---
+        window.onload = function() {
+            renderExclusionGrid();
+            // Load tên mẫu (nếu muốn)
+            // document.getElementById('nameList').value = "Nguyễn Văn A\nTrần Thị B\nLê Văn C...";
+        };
+
+        // --- HÀM XỬ LÝ GIAO DIỆN ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function renderExclusionGrid() {
+            const grid = document.getElementById('exclusionGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= TOTAL_NUMBERS; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'num-cell';
+                if (excludedNumbers.has(i)) cell.classList.add('excluded');
+                cell.innerText = i;
+                cell.onclick = () => toggleExclusion(i, cell);
+                grid.appendChild(cell);
+            }
+        }
+
+        function toggleExclusion(num, element) {
+            if (excludedNumbers.has(num)) {
+                excludedNumbers.delete(num);
+                element.classList.remove('excluded');
+            } else {
+                excludedNumbers.add(num);
+                element.classList.add('excluded');
+            }
+        }
+
+        function setMode(mode) {
+            if(isSpinning) return;
+            currentMode = mode;
+            
+            // Update UI nút bấm
+            document.querySelectorAll('.mode-btn').forEach((btn, index) => {
+                if (index + 1 === mode) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+
+            // Update UI hiển thị ô kết quả
+            const container = document.getElementById('resultContainer');
+            container.innerHTML = '';
+            for(let i=0; i<mode; i++) {
+                container.innerHTML += `
+                    <div class="result-box" id="box-${i}">
+                        <div class="result-number">?</div>
+                        <div class="result-name">---</div>
+                    </div>
+                `;
+            }
+        }
+
+        function getName(num) {
+            const text = document.getElementById('nameList').value;
+            const lines = text.split('\n');
+            // Mảng bắt đầu từ 0, số bắt đầu từ 1
+            if (lines[num-1]) return lines[num-1];
+            return "Khách mời " + num;
+        }
+
+        // --- CORE LOGIC: RANDOM ---
+        function startSpin() {
+            if (isSpinning) return;
+            
+            // 1. Tính toán Pool khả dụng
+            let availablePool = [];
+            for(let i=1; i<=TOTAL_NUMBERS; i++) {
+                if (!excludedNumbers.has(i) && !winnerNumbers.has(i)) {
+                    availablePool.push(i);
+                }
+            }
+
+            // 2. Validate
+            if (availablePool.length < currentMode) {
+                alert("Không đủ số để quay! (Đã quay hết hoặc bị loại trừ quá nhiều)");
+                return;
+            }
+
+            // 3. Bắt đầu quay
+            isSpinning = true;
+            document.getElementById('spinBtn').disabled = true;
+            const prizeValue = document.getElementById('prizeMoney').value;
+
+            // Hiệu ứng chạy số (Rolling)
+            let frames = 0;
+            const duration = 50; // số lần nhảy số
+            const interval = setInterval(() => {
+                frames++;
+                // Update số ngẫu nhiên giả trên màn hình
+                for(let i=0; i<currentMode; i++) {
+                    const randTemp = availablePool[Math.floor(Math.random() * availablePool.length)];
+                    updateBoxUI(i, randTemp, false);
+                }
+
+                // Dừng lại
+                if (frames > 20 && frames > (20 + Math.random()*10)) { // Random thời điểm dừng chút xíu cho tự nhiên
+                    clearInterval(interval);
+                    finalizeResult(availablePool, prizeValue);
+                }
+            }, 80); // Tốc độ nhảy số (ms)
+        }
+
+        function finalizeResult(availablePool, prizeValue) {
+            // Chọn kết quả thật
+            let results = [];
+            for(let i=0; i<currentMode; i++) {
+                // Lấy ngẫu nhiên từ pool và xoá khỏi pool tạm để không trùng trong cùng 1 lượt batch
+                const index = Math.floor(Math.random() * availablePool.length);
+                const picked = availablePool[index];
+                results.push(picked);
+                availablePool.splice(index, 1); 
+                
+                // Thêm vào danh sách đã trúng chính thức
+                winnerNumbers.add(picked);
+            }
+
+            // Update UI lần cuối
+            results.forEach((num, idx) => {
+                updateBoxUI(idx, num, true);
+            });
+
+            // Hiệu ứng ăn mừng
+            triggerConfetti();
+            isSpinning = false;
+            document.getElementById('spinBtn').disabled = false;
+
+            // Lưu log
+            logHistory(results, prizeValue);
+        }
+
+        function updateBoxUI(boxIndex, number, isFinal) {
+            const box = document.getElementById(`box-${boxIndex}`);
+            box.querySelector('.result-number').innerText = number < 10 ? `0${number}` : number;
+            box.querySelector('.result-name').innerText = getName(number);
+            
+            if(isFinal) {
+                box.style.borderColor = "#fff";
+                setTimeout(() => box.style.borderColor = "var(--accent-color)", 200);
+            }
+        }
+
+        // --- HISTORY & UTILS ---
+        function logHistory(numbers, prize) {
+            const list = document.getElementById('historyList');
+            // Xóa thông báo trống nếu có
+            if (list.querySelector('div').innerText === "Chưa có kết quả nào") {
+                list.innerHTML = '';
+            }
+
+            const now = new Date().toLocaleTimeString();
+            let html = `<div class="history-item">
+                <span class="history-time">${now}</span>
+                <div style="color: var(--accent-color); font-weight:bold;">${prize}</div>`;
+            
+            numbers.forEach(n => {
+                html += `<div>Số <strong>${n}</strong> - ${getName(n)}</div>`;
+            });
+            html += `</div>`;
+
+            list.insertAdjacentHTML('afterbegin', html);
+        }
+
+        function triggerConfetti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            var random = function(min, max) {
+              return Math.random() * (max - min) + min;
+            };
+
+            var interval = setInterval(function() {
+              var timeLeft = animationEnd - Date.now();
+
+              if (timeLeft <= 0) {
+                return clearInterval(interval);
+              }
+
+              var particleCount = 50 * (timeLeft / duration);
+              confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.1, 0.3), y: Math.random() - 0.2 } }));
+              confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        function resetAll() {
+            if(confirm("Bạn có chắc chắn muốn xóa hết lịch sử và làm mới vòng quay?")) {
+                winnerNumbers.clear();
+                excludedNumbers.clear();
+                renderExclusionGrid();
+                document.getElementById('historyList').innerHTML = '<div style="text-align: center; color: #555; margin-top: 20px;">Chưa có kết quả nào</div>';
+                setMode(1);
+            }
+        }
+
+    </script>
+</body>
+</html>
