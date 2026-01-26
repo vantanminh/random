@@ -223,21 +223,7 @@
             width: 100%;
         }
 
-        .money-input {
-            font-size: clamp(1.5rem, 5vw, 3rem); /* Responsive font size */
-            color: var(--success-color);
-            font-weight: 900;
-            text-shadow: 0 0 20px rgba(46, 213, 115, 0.2);
-            margin-bottom: 30px;
-            border: none;
-            background: transparent;
-            text-align: center;
-            width: 100%;
-            max-width: 800px;
-            font-family: 'Montserrat', sans-serif;
-        }
-        .money-input:focus { outline: none; border-bottom: 1px solid #333; }
-        .money-input::placeholder { color: #333; opacity: 0.5; }
+
 
         /* RESULT BOXES */
         .result-container {
@@ -279,18 +265,7 @@
             filter: drop-shadow(0 0 10px rgba(255,215,0,0.3));
         }
 
-        .result-name {
-            font-size: clamp(0.8rem, 2vw, 1.2rem);
-            margin-top: 15px;
-            color: #fff;
-            text-align: center;
-            padding: 0 10px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-            opacity: 0.8;
-        }
+
 
         /* CONTROLS */
         .controls-area {
@@ -381,7 +356,6 @@
             }
 
             .controls-area { margin-top: 40px; }
-            .money-input { margin-bottom: 20px; }
         }
 
         @media (max-width: 480px) {
@@ -417,14 +391,14 @@
 
         <div id="settings" class="tab-content active">
             <div class="input-group">
-                <label><i class="fas fa-ban"></i> Vùng An Toàn (Click để loại trừ):</label>
-                <div class="num-grid" id="exclusionGrid"></div>
+                <label><i class="fas fa-keyboard"></i> Nhập số loại trừ (Ví dụ: 1,2,3):</label>
+                <input type="text" id="exclusionInput" class="styled-input" placeholder="1,2,3,5,10" oninput="updateExclusionFromInput()">
+                <div style="font-size: 0.75rem; color: #666; margin-top: 5px;">Nhập các số cách nhau bởi dấu phẩy</div>
             </div>
 
             <div class="input-group">
-                <label><i class="fas fa-list"></i> Danh sách tên (Mỗi dòng 1 tên):</label>
-                <textarea id="nameList" class="styled-input" rows="8" placeholder="1. Nguyễn Văn A&#10;2. Trần Thị B&#10;..."></textarea>
-                <div style="font-size: 0.75rem; color: #666; margin-top: 5px;">Hệ thống tự map dòng 1 = số 1.</div>
+                <label><i class="fas fa-ban"></i> Vùng An Toàn (Click để loại trừ):</label>
+                <div class="num-grid" id="exclusionGrid"></div>
             </div>
             
             <div class="input-group">
@@ -444,13 +418,10 @@
 
     <!-- Main Stage -->
     <div class="main-stage">
-        <input type="text" class="money-input" id="prizeMoney" value="500,000 VND" placeholder="Nhập phần thưởng...">
-
         <div class="result-container" id="resultContainer">
             <!-- Boxes injected via JS -->
             <div class="result-box">
                 <div class="result-number">?</div>
-                <div class="result-name">Sẵn sàng</div>
             </div>
         </div>
 
@@ -459,6 +430,7 @@
                 <button class="mode-btn active" onclick="setMode(1)">1 Số</button>
                 <button class="mode-btn" onclick="setMode(2)">2 Số</button>
                 <button class="mode-btn" onclick="setMode(3)">3 Số</button>
+                <button class="mode-btn" onclick="setMode(4)">4 Số</button>
             </div>
             <button class="spin-btn" id="spinBtn" onclick="startSpin()">QUAY NGAY</button>
         </div>
@@ -513,6 +485,21 @@
                 excludedNumbers.add(num);
                 element.classList.add('excluded');
             }
+            updateExclusionInput();
+        }
+
+        function updateExclusionFromInput() {
+            const input = document.getElementById('exclusionInput').value;
+            const numbers = input.split(',').map(s => s.trim()).filter(s => s !== '').map(Number).filter(n => !isNaN(n) && n >= 1 && n <= TOTAL_NUMBERS);
+            
+            excludedNumbers.clear();
+            numbers.forEach(n => excludedNumbers.add(n));
+            renderExclusionGrid();
+        }
+
+        function updateExclusionInput() {
+            const numbers = Array.from(excludedNumbers).sort((a, b) => a - b);
+            document.getElementById('exclusionInput').value = numbers.join(',');
         }
 
         function setMode(mode) {
@@ -530,17 +517,9 @@
                 container.innerHTML += `
                     <div class="result-box" id="box-${i}">
                         <div class="result-number">?</div>
-                        <div class="result-name">---</div>
                     </div>
                 `;
             }
-        }
-
-        function getName(num) {
-            const text = document.getElementById('nameList').value;
-            const lines = text.split('\n');
-            if (lines[num-1] && lines[num-1].trim() !== "") return lines[num-1];
-            return "Số " + num;
         }
 
         // --- CORE LOGIC ---
@@ -562,7 +541,6 @@
 
             isSpinning = true;
             document.getElementById('spinBtn').disabled = true;
-            const prizeValue = document.getElementById('prizeMoney').value;
 
             // Rolling Effect
             let frames = 0;
@@ -578,12 +556,12 @@
 
                 if (frames > 25 && frames > (25 + Math.random()*15)) { 
                     clearInterval(interval);
-                    finalizeResult(availablePool, prizeValue);
+                    finalizeResult(availablePool);
                 }
             }, 60);
         }
 
-        function finalizeResult(availablePool, prizeValue) {
+        function finalizeResult(availablePool) {
             let results = [];
             
             // Pick winners
@@ -604,13 +582,12 @@
             isSpinning = false;
             document.getElementById('spinBtn').disabled = false;
 
-            logHistory(results, prizeValue);
+            logHistory(results);
         }
 
         function updateBoxUI(boxIndex, number, isFinal) {
             const box = document.getElementById(`box-${boxIndex}`);
             box.querySelector('.result-number').innerText = number < 10 ? `0${number}` : number;
-            box.querySelector('.result-name').innerText = isFinal ? getName(number) : '...';
             
             if(isFinal) {
                 box.classList.add('popping');
@@ -618,7 +595,7 @@
             }
         }
 
-        function logHistory(numbers, prize) {
+        function logHistory(numbers) {
             const list = document.getElementById('historyList');
             if (list.querySelector('.fa-history')) {
                 list.innerHTML = '';
@@ -629,12 +606,12 @@
             let html = `
             <div class="history-item">
                 <div class="history-header">
-                    <span class="history-prize">${prize}</span>
+                    <span class="history-prize">Kết quả</span>
                     <span class="history-time">${now}</span>
                 </div>`;
             
             numbers.forEach(n => {
-                html += `<div class="history-detail">Số <strong>${n}</strong> - ${getName(n)}</div>`;
+                html += `<div class="history-detail">Số <strong>${n}</strong></div>`;
             });
             html += `</div>`;
 
