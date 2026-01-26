@@ -490,7 +490,8 @@
 
         function updateExclusionFromInput() {
             const input = document.getElementById('exclusionInput').value;
-            const numbers = input.split(',').map(s => s.trim()).filter(s => s !== '').map(Number).filter(n => !isNaN(n) && n >= 1 && n <= TOTAL_NUMBERS);
+            const parts = input.split(',').map(s => s.trim()).filter(s => s !== '');
+            const numbers = parts.map(Number).filter(n => !isNaN(n) && n >= 1 && n <= TOTAL_NUMBERS);
             
             excludedNumbers.clear();
             numbers.forEach(n => excludedNumbers.add(n));
@@ -639,6 +640,7 @@
                 winnerNumbers.clear();
                 excludedNumbers.clear();
                 renderExclusionGrid();
+                updateExclusionInput();
                 document.getElementById('historyList').innerHTML = '<div style="text-align: center; color: #555; margin-top: 40px;"><i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px;"></i><br>Chưa có kết quả nào</div>';
                 setMode(1);
             }
